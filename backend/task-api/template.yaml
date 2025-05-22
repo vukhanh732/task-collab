@@ -1,52 +1,75 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  task-api
+  task-collab
 
-  Sample SAM Template for task-api
+  Sample SAM Template for the task-collab serverless application.
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 3
-
-    # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
-    LoggingConfig:
-      LogFormat: JSON
-Resources:
-  HelloWorldFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
-    Properties:
-      CodeUri: hello-world/
-      Handler: app.lambdaHandler
-      Runtime: nodejs22.x
-      Architectures:
+    MemorySize: 128
+    Runtime: nodejs18.x # Or your selected Node.js version (e.g., nodejs20.x)
+    Architectures:
       - x86_64
+    # Handler: app.lambdaHandler # You can set a global handler if all functions use the same
+    # Environment: # Global environment variables
+    #   Variables:
+    #     PARAM1: VALUE
+
+Resources:
+  # This is the logical ID of your Lambda function resource
+  TaskApiFunction: # Renamed from HelloWorldFunction for clarity
+    Type: AWS::Serverless::Function # SAM specific resource type for Lambda
+    Properties:
+      # CodeUri points to the directory containing your Lambda code (app.ts, package.json)
+      # If your package.json and app.ts are in 'hello-world/', this is correct.
+      CodeUri: hello-world/
+      # Handler: The file (app.js after compilation) and the exported function to call.
+      # SAM build process handles the path to the compiled file within the deployment package.
+      Handler: app.lambdaHandler
+      # Runtime and Architectures are inherited from Globals unless overridden here.
       Events:
-        HelloWorld:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+        HealthCheckEvent: # Logical ID for the /health endpoint event
+          Type: Api # Creates an API Gateway endpoint
           Properties:
-            Path: /hello
+            Path: /health # Your health check path
             Method: get
-    Metadata: # Manage esbuild properties
+        RootPathEvent: # Logical ID for the root path endpoint event
+          Type: Api
+          Properties:
+            Path: / # The root path for "hello world"
+            Method: get
+      # Policies: # Example of adding IAM policies if your function needs more permissions
+      #   - DynamoDBCrudPolicy:
+      #       TableName: !Ref MyTasksTable # Example: !Ref to a DynamoDB table defined below
+    Metadata: # AWS SAM build metadata
+      # BuildMethod: esbuild # Or typescript, depending on what 'sam init' configured
+      # If 'sam init' used 'typescript', it might not use esbuild here directly
+      # and relies on your package.json scripts. If it used esbuild, configure as below.
+      # Check your original template.yaml from sam init if unsure.
+      # Assuming esbuild for TypeScript, which is common:
       BuildMethod: esbuild
       BuildProperties:
         Minify: true
-        Target: es2020
-        Sourcemap: true
+        Target: "es2020" # Match your tsconfig.json target
+        Sourcemap: true # Or false
+        # EntryPoints should point to your source .ts handler file within the CodeUri directory
         EntryPoints:
-        - app.ts
+          - app.ts
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
+  # Find out more about other implicit resources you can reference here:
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorldApi:
-    Description: API Gateway endpoint URL for Prod stage for Hello World function
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunction:
-    Description: Hello World Lambda Function ARN
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionIamRole:
-    Description: Implicit IAM Role created for Hello World function
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+  TaskApiEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage for Task API function"
+    # Corrected !Sub syntax: No backslashes before ${...}
+    Value: !Sub "https:// ${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  TaskApiFunction: # Renamed from HelloWorldFunction for clarity
+    Description: "Task API Lambda Function ARN"
+    Value: !GetAtt TaskApiFunction.Arn # Use the new logical ID
+  TaskApiFunctionIamRole: # Renamed from HelloWorldFunctionIamRole for clarity
+    Description: "Implicit IAM Role created for Task API function"
+    Value: !GetAtt TaskApiFunctionRole.Arn # Use the new logical ID (SAM appends 'Role')

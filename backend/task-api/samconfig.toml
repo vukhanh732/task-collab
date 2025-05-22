@@ -16,6 +16,10 @@ lint = true
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
+stack_name = "task-collab-api"
+s3_prefix = "task-collab-api"
+region = "ap-southeast-2"
+image_repositories = []
 
 [default.package.parameters]
 resolve_s3 = true
